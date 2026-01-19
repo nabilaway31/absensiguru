@@ -15,9 +15,8 @@
     </div>
     <div class="flex items-center gap-2">
         <form action="{{ route('absensi.index') }}" method="GET" class="flex items-center gap-2">
-            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau NIP"
-                class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg" />
-            <button type="submit" class="px-3 py-1.5 bg-white border rounded-lg text-gray-700">Cari</button>
+            <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau NIP" class="px-3 py-1.5 text-sm text-black placeholder-gray-600 border border-gray-300 rounded-lg"/>
+            <button type="submit" class="px-3 py-1.5 bg-white border rounded-lg text-black font-medium">Cari</button>
         </form>
     </div>
     <a href="/absensi/tambah"

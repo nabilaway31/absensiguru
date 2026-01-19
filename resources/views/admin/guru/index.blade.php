@@ -22,20 +22,8 @@
             <span>Tambah Guru</span>
         </a>
         <form action="{{ route('guru.index') }}" method="GET" class="flex items-center gap-2">
-    <input 
-        type="text" 
-        name="q" 
-        value="{{ request('q') }}" 
-        placeholder="Cari nama atau NIP"
-        class="px-3 py-1.5 text-sm 
-               text-black placeholder-gray-600
-               border border-gray-300 rounded-lg"
-    />
-    <button 
-        type="submit" 
-        class="px-3 py-1.5 bg-white border rounded-lg text-black font-medium">
-        Cari
-    </button>
+    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau NIP" class="px-3 py-1.5 text-sm text-black placeholder-gray-600 border border-gray-300 rounded-lg"/>
+    <button type="submit" class="px-3 py-1.5 bg-white border rounded-lg text-black font-medium">Cari</button>
 </form>
 
     </div>
