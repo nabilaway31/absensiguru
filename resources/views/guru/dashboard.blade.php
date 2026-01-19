@@ -117,19 +117,19 @@
                                     <div>
                                         <p class="text-sm text-yellow-700 font-medium">Status Kehadiran</p>
                                         <p class="text-2xl font-bold text-yellow-800">Terlambat</p>
-                                        <p class="text-sm text-yellow-600 mt-1">Batas jam masuk: 07:30 WIB</p>
+                                        <p class="text-sm text-yellow-600 mt-1">Batas jam masuk: 07:30 WIB (Lewat = Terlambat)</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     @if($absensiHariIni->jam_datang)
                                         <p class="text-sm text-gray-600">Jam Masuk</p>
                                         <p class="text-xl font-bold text-gray-900">
-                                            {{ \Carbon\Carbon::parse($absensiHariIni->jam_datang)->format('H:i') }}</p>
+                                            {{ \Carbon\Carbon::parse($absensiHariIni->jam_datang)->format('H:i') }} WIB</p>
                                     @endif
                                     @if($absensiHariIni->jam_pulang)
                                         <p class="text-sm text-gray-600 mt-2">Jam Pulang</p>
                                         <p class="text-xl font-bold text-gray-900">
-                                            {{ \Carbon\Carbon::parse($absensiHariIni->jam_pulang)->format('H:i') }}</p>
+                                            {{ \Carbon\Carbon::parse($absensiHariIni->jam_pulang)->format('H:i') }} WIB</p>
                                     @endif
                                 </div>
                             </div>
@@ -174,8 +174,11 @@
                             </div>
                             <div>
                                 <p class="text-xl font-bold text-yellow-800">Belum Melakukan Absensi</p>
-                                <p class="text-sm text-yellow-700">Silakan lakukan absensi masuk terlebih dahulu</p>
-                                <p class="text-xs text-yellow-600 mt-1">Batas jam masuk: 07:30 WIB (Lewat = Terlambat)</p>
+                                <p class="text-sm text-yellow-700">Silakan lakukan absensi masuk</p>
+                                <p class="text-xs text-yellow-600 mt-1">
+                                    <strong>Penting:</strong> Absen masuk hanya bisa mulai jam 05:00 WIB. 
+                                    Lewat jam 07:30 WIB = Status Terlambat
+                                </p>
                             </div>
                         </div>
                     </div>

@@ -17,8 +17,8 @@ class GuruAbsensiController extends Controller
      * =========================
      * ABSEN MASUK
      * Jam masuk otomatis
-     * TELAT jika > 07:00
-     * Dikunci 05:00 - 09:00
+     * TELAT jika > 07:30
+     * Bisa absen kapan saja
      * =========================
      */
     public function absenMasuk(Request $request)
@@ -26,11 +26,7 @@ class GuruAbsensiController extends Controller
         $guru = Guru::where('user_id', Auth::id())->firstOrFail();
 
         $tanggal = Carbon::today()->format('Y-m-d');
-        $jamSekarang = Carbon::now()->format('H:i');
-
-        if ($jamSekarang < '05:00') {
-            return back()->with('error', 'Absen masuk hanya bisa mulai jam 05:00');
-        }
+        $jamSekarang = Carbon::now()->format('H:i:s');
 
         // Cek sudah absen atau belum
         $cek = Absensi::where('guru_id', $guru->id)
@@ -54,8 +50,8 @@ class GuruAbsensiController extends Controller
         ]);
 
         $message = $status === 'Telat'
-            ? "Absen masuk berhasil! Anda terlambat. Batas jam masuk: " . self::JAM_BATAS_MASUK
-            : "Absen masuk berhasil!";
+            ? "Absen masuk berhasil! Status: Terlambat (Batas jam masuk: " . self::JAM_BATAS_MASUK . " WIB)"
+            : "Absen masuk berhasil! Status: Tepat Waktu";
 
         return back()->with('success', $message);
     }
