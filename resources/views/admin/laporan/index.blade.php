@@ -15,11 +15,13 @@
     </div>
     <div class="flex items-center gap-2">
         <form action="{{ route('laporan.index') }}" method="GET" class="flex items-center gap-2">
-    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama atau NIP" class="px-3 py-1.5 text-sm text-black placeholder-gray-600 border border-gray-300 rounded-lg"/>
-    <input type="date" name="from" value="{{ request('from') }}" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700" />
-    <input type="date" name="to" value="{{ request('to') }}" class="px-3 py-1.5 text-sm border rounded-lg text-gray-700" />
+    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama" class="px-3 py-1.5 text-sm text-black placeholder-gray-600 border border-gray-300 rounded-lg"/>
+    <input type="date" name="from" value="{{ request('from') }}"class="px-3 py-1.5 text-sm border rounded-lg text-gray-700"/>
+    <input type="date"name="to"value="{{ request('to') }}"class="px-3 py-1.5 text-sm border rounded-lg text-gray-700"/>
     <button type="submit" class="px-3 py-1.5 bg-white border rounded-lg text-black font-medium">Cari</button>
+
 </form>
+
         <a href="/laporan/cetak?{{ http_build_query(request()->only(['from', 'to'])) }}"
             class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
