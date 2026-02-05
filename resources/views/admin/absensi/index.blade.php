@@ -32,6 +32,7 @@
     @slot('head')
     <tr>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NIP</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Guru</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
@@ -45,6 +46,7 @@
     @forelse ($absensi as $no => $a)
         <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 text-sm text-gray-700">{{ $no + 1 }}</td>
+            <td class="px-4 py-3 text-sm text-gray-800 font-medium">{{ $a->guru->nip }}</td>
             <td class="px-4 py-3 text-sm text-gray-800 font-medium">{{ $a->guru->nama }}</td>
             <td class="px-4 py-3 text-sm text-gray-700">{{ \Carbon\Carbon::parse($a->tanggal)->format('d/m/Y') }}</td>
             <td class="px-4 py-3 text-sm text-gray-700">
@@ -153,6 +155,16 @@
     @endcomponent
 
     <script>
+        @if(session('duplicate_entry'))
+        Swal.fire({
+            icon: 'error',
+            title: 'Data Ganda!',
+            text: "{{ session('duplicate_entry') }}",
+            confirmButtonColor: '#4f46e5', // Warna indigo sesuai tema Anda
+        });
+    @endif
+
+
         function hapus(id) {
             Swal.fire({
                 title: 'Yakin?',

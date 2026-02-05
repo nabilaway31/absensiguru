@@ -15,11 +15,11 @@ class UserSeeder extends Seeder
         |--------------------------------------------------------------------------
         | ADMIN
         |--------------------------------------------------------------------------
-        */
+        */  
         $admin = User::create([
-            'name' => 'nabila',
-            'email' => 'nabila@gmail.com',
-            'password' => Hash::make('nabila123'),
+            'name' => 'admin',
+            'email' => 'admin@gmail.com',
+            'password' => Hash::make('admin123'),
             'role' => 'admin',
         ]);
 
@@ -29,16 +29,16 @@ class UserSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
         $guruUser = User::create([
-            'name' => 'Guru Satu',
-            'email' => 'guru@absensi.test',
-            'password' => Hash::make('password'),
+            'name' => 'Danang Teguh Santoso',
+            'email' => 'guru@gmail.com',
+            'password' => Hash::make('guru123'),
             'role' => 'guru',
         ]);
 
         Guru::create([
             'user_id' => $guruUser->id,
             'nip' => '1987654321',
-            'nama' => 'Guru Satu',
+            'nama' => 'Danang Teguh Santoso',
             'jenis_kelamin' => 'L',
             'alamat' => 'Mojokerto',
             'no_hp' => '08123456789',

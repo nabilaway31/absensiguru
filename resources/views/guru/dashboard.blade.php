@@ -3,6 +3,13 @@
 @section('title', 'Dashboard Guru')
 
 @section('content')
+
+@php
+        // LOGIKA TAMBAHAN: Menentukan status waktu pulang
+        $jamSekarangReal = \Carbon\Carbon::now()->format('H:i');
+        $jamPulangSetting = $jamPulangSetting ?? '15:00'; // Default jika data setting kosong
+        $sudahWaktunyaPulang = $jamSekarangReal >= $jamPulangSetting;
+    @endphp
     <div class="w-full space-y-6">
 
         {{-- WELCOME CARD --}}
@@ -28,7 +35,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
-                    <span class="text-lg font-medium" id="live-time">{{ $jamSekarang }}</span>
+                   <span class="text-lg font-medium" id="live-time">{{ \Carbon\Carbon::now()->format('H:i:s') }}</span>
                 </div>
             </div>
         </div>
@@ -117,7 +124,7 @@
                                     <div>
                                         <p class="text-sm text-yellow-700 font-medium">Status Kehadiran</p>
                                         <p class="text-2xl font-bold text-yellow-800">Terlambat</p>
-                                        <p class="text-sm text-yellow-600 mt-1">Batas jam masuk: 07:30 WIB (Lewat = Terlambat)</p>
+                                        <p class="text-sm text-yellow-600 mt-1">Batas jam masuk: 07:00 WIB (Lewat = Terlambat)</p>
                                     </div>
                                 </div>
                                 <div class="text-right">
@@ -176,8 +183,8 @@
                                 <p class="text-xl font-bold text-yellow-800">Belum Melakukan Absensi</p>
                                 <p class="text-sm text-yellow-700">Silakan lakukan absensi masuk</p>
                                 <p class="text-xs text-yellow-600 mt-1">
-                                    <strong>Penting:</strong> Absen masuk hanya bisa mulai jam 05:00 WIB. 
-                                    Lewat jam 07:30 WIB = Status Terlambat
+                                    <strong>Penting:</strong> Absen masuk hanya bisa mulai jam 07.00 WIB. 
+                                    Lewat jam 07:00 WIB = Status Terlambat
                                 </p>
                             </div>
                         </div>
@@ -210,24 +217,39 @@
                     <form action="{{ route('guru_user.absen.pulang') }}" method="POST">
                         @csrf
                         @php
-                            $isDisabled = !$absensiHariIni || in_array($absensiHariIni?->status, ['Izin', 'Sakit']);
+                            // Syarat tombol Pulang AKTIF (menyala):
+                            // 1. Guru sudah absen masuk ($absensiHariIni tidak null)
+                            // 2. Guru tidak sedang Izin/Sakit
+                            // 3. Kolom jam_pulang di database masih kosong (belum pernah klik pulang)
+                            // 4. Waktu sekarang sudah masuk jam pulang ($sudahWaktunyaPulang)
+                            $isPulangDisabled = !$absensiHariIni || 
+                                                in_array($absensiHariIni->status, ['Izin', 'Sakit']) || 
+                                                $absensiHariIni->jam_pulang || 
+                                                !$sudahWaktunyaPulang;
                         @endphp
+
                         <button type="submit"
-                            class="w-full group relative overflow-hidden {{ $isDisabled ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800' }} text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300"
-                            {{ $isDisabled ? 'disabled' : '' }}>
+                            class="w-full group relative overflow-hidden {{ $isPulangDisabled ? 'bg-gray-300 cursor-not-allowed' : 'bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800' }} text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-300"
+                            {{ $isPulangDisabled ? 'disabled' : '' }}>
+                            
                             <div class="flex items-center justify-center gap-3 relative z-10">
                                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1">
                                     </path>
                                 </svg>
-                                <span class="text-lg">Absen Pulang</span>
+                                <span class="text-lg">
+                                    @if(!$absensiHariIni)
+                                        Absen Masuk Dulu
+                                    @elseif($absensiHariIni->jam_pulang)
+                                        Sudah Absen Pulang
+                                    @elseif(!$sudahWaktunyaPulang)
+                                        Belum Jam Pulang ({{ $jamPulangSetting ?? '15:00' }})
+                                    @else
+                                        Absen Pulang
+                                    @endif
+                                </span>
                             </div>
-                            @if($absensiHariIni && !in_array($absensiHariIni->status, ['Izin', 'Sakit']))
-                                <div
-                                    class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-0 group-hover:opacity-20 transform -translate-x-full group-hover:translate-x-full transition-all duration-1000">
-                                </div>
-                            @endif
                         </button>
                     </form>
                 </div>
@@ -236,8 +258,9 @@
 
     </div>
 
+    {{-- Bagian script di paling bawah file --}}
     <script>
-        // Update live time
+        // Kode updateTime() yang sudah ada tetap dipertahankan
         function updateTime() {
             const now = new Date();
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -246,5 +269,11 @@
         }
         setInterval(updateTime, 1000);
         updateTime();
+
+        // TAMBAHAN: Refresh halaman otomatis setiap 1 menit 
+        // Agar tombol "Absen Pulang" menyala tepat waktu tanpa klik refresh manual
+        setInterval(function() {
+            location.reload();
+        }, 60000); // 60000 ms = 1 menit
     </script>
 @endsection

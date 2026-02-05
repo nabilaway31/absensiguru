@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Absensi;
-use Illuminate\Http\Request;
-use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class LaporanController extends Controller
 {
@@ -18,6 +18,7 @@ class LaporanController extends Controller
     {
         $query = Absensi::with('guru');
 
+        // Filter Tanggal
         if ($request->filled('from') && $request->filled('to')) {
             $query->whereBetween('tanggal', [$request->from, $request->to]);
         } elseif ($request->filled('from')) {
@@ -26,6 +27,7 @@ class LaporanController extends Controller
             $query->whereDate('tanggal', '<=', $request->to);
         }
 
+        // Filter Pencarian Nama/NIP (Satu-satunya yang kurang di fungsi cetak Anda sebelumnya)
         if ($request->filled('q')) {
             $q = $request->q;
             $query->whereHas('guru', function ($sub) use ($q) {
@@ -34,6 +36,8 @@ class LaporanController extends Controller
         }
 
         $laporan = $query->orderBy('tanggal', 'desc')->paginate(15);
+
+        // Simpan variabel laporan ke view
         return view('admin.laporan.index', compact('laporan'));
     }
 
@@ -44,9 +48,10 @@ class LaporanController extends Controller
      */
     public function cetak()
     {
-        // Terima filter dari query string (sama seperti index)
         $request = request();
         $query = Absensi::with('guru');
+
+        // Filter Tanggal (Sama dengan index)
         if ($request->filled('from') && $request->filled('to')) {
             $query->whereBetween('tanggal', [$request->from, $request->to]);
         } elseif ($request->filled('from')) {
@@ -54,9 +59,17 @@ class LaporanController extends Controller
         } elseif ($request->filled('to')) {
             $query->whereDate('tanggal', '<=', $request->to);
         }
+
+        // TAMBAHAN: Masukkan filter pencarian nama agar PDF tersaring sesuai input "Cari"
+        if ($request->filled('q')) {
+            $q = $request->q;
+            $query->whereHas('guru', function ($sub) use ($q) {
+                $sub->where('nama', 'like', "%$q%")->orWhere('nip', 'like', "%$q%");
+            });
+        }
+
         $laporan = $query->orderBy('tanggal', 'desc')->get();
 
-        // Tanggal & jam cetak
         $tanggal = Carbon::now()->translatedFormat('d F Y');
         $jam = Carbon::now()->format('H:i');
 

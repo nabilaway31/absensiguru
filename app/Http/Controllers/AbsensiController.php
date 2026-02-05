@@ -6,6 +6,7 @@ use App\Models\Absensi;
 use App\Models\Guru;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class AbsensiController extends Controller
 {
@@ -26,6 +27,7 @@ class AbsensiController extends Controller
         }
 
         $absensi = $query->orderBy('tanggal', 'desc')->paginate(15);
+
         return view('admin.absensi.index', compact('absensi'));
     }
 
@@ -46,15 +48,29 @@ class AbsensiController extends Controller
             'status' => 'required|in:Hadir,Telat,Izin,Sakit,Alfa',
             'jam_datang' => 'nullable',
             'jam_pulang' => 'nullable',
+            'bukti' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi upload bukti
         ]);
 
-        Absensi::create([
-            'guru_id' => $request->guru_id,
-            'tanggal' => $request->tanggal,
-            'status' => $request->status,
-            'jam_datang' => $request->jam_datang,
-            'jam_pulang' => $request->jam_pulang,
-        ]);
+        // CEK DATA GANDA
+        $exists = Absensi::where('guru_id', $request->guru_id)
+            ->whereDate('tanggal', $request->tanggal)
+            ->exists();
+
+        if ($exists) {
+            return back()->with('duplicate_entry', 'Guru tersebut sudah memiliki data absensi pada tanggal tersebut!');
+        }
+
+        $data = $request->all();
+
+        // PROSES UPLOAD BUKTI (Admin manual)
+        if ($request->hasFile('bukti')) {
+            $file = $request->file('bukti');
+            $nama_file = time().'_'.$file->getClientOriginalName();
+            $file->storeAs('public/bukti_izin', $nama_file); // Simpan ke storage
+            $data['bukti'] = $nama_file;
+        }
+
+        Absensi::create($data);
 
         return redirect()->route('absensi.index')
             ->with('success', 'Absensi berhasil ditambahkan');
@@ -78,17 +94,26 @@ class AbsensiController extends Controller
             'status' => 'required|in:Hadir,Telat,Izin,Sakit,Alfa',
             'jam_datang' => 'nullable',
             'jam_pulang' => 'nullable',
+            'bukti' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         $absensi = Absensi::findOrFail($id);
+        $data = $request->all();
 
-        $absensi->update([
-            'guru_id' => $request->guru_id,
-            'tanggal' => $request->tanggal,
-            'status' => $request->status,
-            'jam_datang' => $request->jam_datang,
-            'jam_pulang' => $request->jam_pulang,
-        ]);
+        // PROSES UPDATE BUKTI
+        if ($request->hasFile('bukti')) {
+            // Hapus foto lama jika ada
+            if ($absensi->bukti) {
+                Storage::delete('public/bukti_izin/'.$absensi->bukti);
+            }
+
+            $file = $request->file('bukti');
+            $nama_file = time().'_'.$file->getClientOriginalName();
+            $file->storeAs('public/bukti_izin', $nama_file);
+            $data['bukti'] = $nama_file;
+        }
+
+        $absensi->update($data);
 
         return redirect()->route('absensi.index')
             ->with('success', 'Absensi berhasil diupdate');
@@ -97,7 +122,14 @@ class AbsensiController extends Controller
     // Hapus absensi (Admin)
     public function destroy($id)
     {
-        Absensi::findOrFail($id)->delete();
+        $absensi = Absensi::findOrFail($id);
+
+        // Hapus file bukti dari storage saat data dihapus
+        if ($absensi->bukti) {
+            Storage::delete('public/bukti_izin/'.$absensi->bukti);
+        }
+
+        $absensi->delete();
 
         return redirect()->route('absensi.index')
             ->with('success', 'Absensi berhasil dihapus');
@@ -107,6 +139,7 @@ class AbsensiController extends Controller
     public function show($id)
     {
         $absensi = Absensi::with('guru')->findOrFail($id);
+
         return view('admin.absensi.show', compact('absensi'));
     }
 
@@ -114,10 +147,11 @@ class AbsensiController extends Controller
     public function approve($id)
     {
         $absensi = Absensi::findOrFail($id);
-        if (!in_array($absensi->status, ['Izin', 'Sakit'])) {
+        if (! in_array($absensi->status, ['Izin', 'Sakit'])) {
             return back()->with('error', 'Hanya izin/sakit yang bisa di-approve');
         }
         $absensi->update(['approval_status' => 'approved']);
+
         return back()->with('success', 'Izin/Sakit telah disetujui');
     }
 
@@ -126,13 +160,14 @@ class AbsensiController extends Controller
     {
         $request->validate(['approval_note' => 'nullable|string|max:500']);
         $absensi = Absensi::findOrFail($id);
-        if (!in_array($absensi->status, ['Izin', 'Sakit'])) {
+        if (! in_array($absensi->status, ['Izin', 'Sakit'])) {
             return back()->with('error', 'Hanya izin/sakit yang bisa di-reject');
         }
         $absensi->update([
             'approval_status' => 'rejected',
             'approval_note' => $request->approval_note,
         ]);
+
         return back()->with('success', 'Izin/Sakit telah ditolak');
     }
 
@@ -181,7 +216,7 @@ class AbsensiController extends Controller
             ->whereDate('tanggal', $today)
             ->first();
 
-        if (!$absensi || !$absensi->jam_datang) {
+        if (! $absensi || ! $absensi->jam_datang) {
             return redirect()->back()
                 ->with('error', 'Anda belum absen masuk');
         }

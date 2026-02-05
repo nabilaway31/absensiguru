@@ -14,15 +14,44 @@
         <h5 class="text-lg font-semibold">Laporan Absensi Guru</h5>
     </div>
     <div class="flex items-center gap-2">
-        <form action="{{ route('laporan.index') }}" method="GET" class="flex items-center gap-2">
-    <input type="text" name="q" value="{{ request('q') }}" placeholder="Cari nama" class="px-3 py-1.5 text-sm text-black placeholder-gray-600 border border-gray-300 rounded-lg"/>
-    <input type="date" name="from" value="{{ request('from') }}"class="px-3 py-1.5 text-sm border rounded-lg text-gray-700"/>
-    <input type="date"name="to"value="{{ request('to') }}"class="px-3 py-1.5 text-sm border rounded-lg text-gray-700"/>
-    <button type="submit" class="px-3 py-1.5 bg-white border rounded-lg text-black font-medium">Cari</button>
+        <form action="{{ route('laporan.index') }}" method="GET" class="flex flex-wrap gap-3 items-end">
+    {{-- Input Pencarian Nama/NIP --}}
+    <div class="flex-1">
+        <input type="text" 
+               name="q" 
+               value="{{ request('q') }}" 
+               placeholder="Cari nama atau NIP..." 
+               class="w-full px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 placeholder-gray-400 shadow-sm"
+               autocomplete="off">
+    </div>
 
+    {{-- Input Tanggal Mulai --}}
+    <div class="w-40">
+        <input type="date" 
+               name="from" 
+               value="{{ request('from') }}" 
+               class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+    </div>
+
+    {{-- Input Tanggal Selesai --}}
+    <div class="w-40">
+        <input type="date" 
+               name="to" 
+               value="{{ request('to') }}" 
+               class="w-full px-3 py-2 rounded-lg border border-gray-300 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-500 shadow-sm">
+    </div>
+
+    {{-- Tombol Cari --}}
+    <button type="submit" class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shadow-md">
+        Cari
+    </button>
+    
+    {{-- Tombol Cetak PDF --}}
+    <a href="{{ route('laporan.cetak', request()->query()) }}" target="_blank" class="px-6 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-all shadow-md">
+        Cetak PDF
+    </a>
 </form>
-
-        <a href="/laporan/cetak?{{ http_build_query(request()->only(['from', 'to'])) }}"
+        {{-- <a href="/laporan/cetak?{{ http_build_query(request()->only(['from', 'to'])) }}"
             class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -30,7 +59,7 @@
                 </path>
             </svg>
             Cetak PDF
-        </a>
+        </a> --}}
     </div>
     @endslot
 
@@ -38,6 +67,7 @@
     @slot('head')
     <tr>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
+        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NIP</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Guru</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jam Datang</th>
@@ -49,6 +79,7 @@
     @forelse ($laporan as $no => $l)
         <tr class="hover:bg-gray-50 transition-colors">
             <td class="px-4 py-3 text-sm text-gray-700">{{ $no + 1 }}</td>
+            <td class="px-4 py-3 text-sm text-gray-800 font-medium">{{ $l->guru->nip }}</td>
             <td class="px-4 py-3 text-sm text-gray-800 font-medium">{{ $l->guru->nama }}</td>
             <td class="px-4 py-3 text-sm text-gray-700">{{ \Carbon\Carbon::parse($l->tanggal)->format('d/m/Y') }}</td>
             <td class="px-4 py-3 text-sm text-gray-600">{{ $l->jam_datang ?? '-' }}</td>

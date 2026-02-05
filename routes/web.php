@@ -5,15 +5,15 @@ use App\Http\Controllers\DashboardController;
 /* ================= CONTROLLER ADMIN ================= */
 use App\Http\Controllers\GuruAbsensiController;
 use App\Http\Controllers\GuruController;
-use App\Http\Controllers\GuruDashboardController;
+use App\Http\Controllers\GuruIzinController;
 use App\Http\Controllers\GuruProfilController;
 /* ================= CONTROLLER GURU ================= */
 use App\Http\Controllers\LaporanController;
-use App\Http\Controllers\GuruIzinController;
+use App\Http\Controllers\SettingController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-require __DIR__ . '/auth.php';
+require __DIR__.'/auth.php';
 
 Route::get('/', function () {
     return redirect()->route('login');
@@ -53,6 +53,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/', [LaporanController::class, 'index'])->name('index');
         Route::get('/cetak', [LaporanController::class, 'cetak'])->name('cetak');
     });
+
+    Route::middleware(['auth', 'role:admin'])->group(function () { // Sesuaikan middleware admin Anda
+        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+        Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
+    });
 });
 
 /*
@@ -60,36 +65,34 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 | GURU
 |--------------------------------------------------------------------------
 */
-Route::middleware(['auth', 'role:guru'])
-    ->prefix('guru-user')
-    ->name('guru_user.')
-    ->group(function () {
+Route::middleware(['auth', 'role:guru'])->prefix('guru-user')->name('guru_user.')->group(function () {
 
-        Route::get('/dashboard', [GuruDashboardController::class, 'index'])
-            ->name('dashboard');
+    // Sesuaikan Controller ke GuruAbsensiController karena fungsi index (absen & jam_pulang) ada di sana
+    Route::get('/dashboard', [GuruAbsensiController::class, 'index'])
+        ->name('dashboard');
 
-        Route::post('/absen-masuk', [GuruAbsensiController::class, 'absenMasuk'])
-            ->name('absen.masuk');
+    Route::post('/absen-masuk', [GuruAbsensiController::class, 'absenMasuk'])
+        ->name('absen.masuk');
 
-        Route::post('/absen-pulang', [GuruAbsensiController::class, 'absenPulang'])
-            ->name('absen.pulang');
+    Route::post('/absen-pulang', [GuruAbsensiController::class, 'absenPulang'])
+        ->name('absen.pulang');
 
-        Route::get('/rekap', [GuruAbsensiController::class, 'rekap'])
-            ->name('rekap');
+    Route::get('/rekap', [GuruAbsensiController::class, 'rekap'])
+        ->name('rekap');
 
-        Route::get('/profil', [GuruProfilController::class, 'index'])
-            ->name('profil');
+    Route::get('/profil', [GuruProfilController::class, 'index'])
+        ->name('profil');
 
-        Route::post('/profil/update', [GuruProfilController::class, 'update'])
-            ->name('profil.update');
+    Route::post('/profil/update', [GuruProfilController::class, 'update'])
+        ->name('profil.update');
 
-        // Izin / Sakit (Guru)
-        Route::prefix('izin')->name('izin.')->group(function () {
-            Route::get('/', [GuruIzinController::class, 'index'])->name('index');
-            Route::get('/tambah', [GuruIzinController::class, 'create'])->name('create');
-            Route::post('/simpan', [GuruIzinController::class, 'store'])->name('store');
-        });
+    // Izin / Sakit (Guru)
+    Route::prefix('izin')->name('izin.')->group(function () {
+        Route::get('/', [GuruIzinController::class, 'index'])->name('index');
+        Route::get('/tambah', [GuruIzinController::class, 'create'])->name('create');
+        Route::post('/simpan', [GuruIzinController::class, 'store'])->name('store');
     });
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -100,5 +103,6 @@ Route::post('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
+
     return redirect('/login');
 })->name('logout');
