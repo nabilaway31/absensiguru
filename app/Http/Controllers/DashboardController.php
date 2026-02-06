@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Guru;
 use App\Models\Absensi;
+use App\Models\Guru;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -36,13 +35,34 @@ class DashboardController extends Controller
             ->latest()
             ->get();
 
-        // Kirim ke view dashboard (menggunakan namespace folder admin)
+        // --- TAMBAHAN: Logika Peringkat Kehadiran Guru (Top 5) ---
+        // Menghitung akumulasi status dari awal data ada (bukan hanya hari ini)
+        $topAbsensi = Guru::withCount([
+            'absensi as total_hadir' => function ($query) {
+                $query->where('status', 'Hadir');
+            },
+            'absensi as total_izin' => function ($query) {
+                $query->where('status', 'Izin');
+            },
+            'absensi as total_sakit' => function ($query) {
+                $query->where('status', 'Sakit');
+            },
+            'absensi as total_alfa' => function ($query) {
+                $query->where('status', 'Alfa');
+            },
+        ])
+            ->orderBy('total_hadir', 'desc') // Mengurutkan dari yang paling rajin hadir
+            ->take(5) // Hanya mengambil 5 guru terbaik
+            ->get();
+
+        // Kirim semua variabel ke view dashboard
         return view('admin.dashboard', compact(
             'totalGuru',
             'hadir',
             'izin',
             'sakit',
-            'absensiHariIni'
+            'absensiHariIni',
+            'topAbsensi' // Variabel baru ditambahkan di sini
         ));
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Absensi;
 use App\Models\Guru;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -14,7 +15,6 @@ class AbsensiController extends Controller
      | ADMIN
      ===================================================== */
 
-    // Tampilkan semua absensi (Admin)
     public function index(Request $request)
     {
         $query = Absensi::with('guru');
@@ -31,7 +31,6 @@ class AbsensiController extends Controller
         return view('admin.absensi.index', compact('absensi'));
     }
 
-    // Form tambah absensi manual (Admin)
     public function create()
     {
         $guru = Guru::all();
@@ -39,7 +38,6 @@ class AbsensiController extends Controller
         return view('admin.absensi.create', compact('guru'));
     }
 
-    // Simpan absensi manual (Admin)
     public function store(Request $request)
     {
         $request->validate([
@@ -48,10 +46,9 @@ class AbsensiController extends Controller
             'status' => 'required|in:Hadir,Telat,Izin,Sakit,Alfa',
             'jam_datang' => 'nullable',
             'jam_pulang' => 'nullable',
-            'bukti' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validasi upload bukti
+            'bukti' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // CEK DATA GANDA
         $exists = Absensi::where('guru_id', $request->guru_id)
             ->whereDate('tanggal', $request->tanggal)
             ->exists();
@@ -62,11 +59,10 @@ class AbsensiController extends Controller
 
         $data = $request->all();
 
-        // PROSES UPLOAD BUKTI (Admin manual)
         if ($request->hasFile('bukti')) {
             $file = $request->file('bukti');
             $nama_file = time().'_'.$file->getClientOriginalName();
-            $file->storeAs('public/bukti_izin', $nama_file); // Simpan ke storage
+            $file->storeAs('public/bukti_izin', $nama_file);
             $data['bukti'] = $nama_file;
         }
 
@@ -76,7 +72,6 @@ class AbsensiController extends Controller
             ->with('success', 'Absensi berhasil ditambahkan');
     }
 
-    // Edit absensi (Admin)
     public function edit($id)
     {
         $absensi = Absensi::findOrFail($id);
@@ -85,7 +80,6 @@ class AbsensiController extends Controller
         return view('admin.absensi.edit', compact('absensi', 'guru'));
     }
 
-    // Update absensi (Admin)
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -100,9 +94,7 @@ class AbsensiController extends Controller
         $absensi = Absensi::findOrFail($id);
         $data = $request->all();
 
-        // PROSES UPDATE BUKTI
         if ($request->hasFile('bukti')) {
-            // Hapus foto lama jika ada
             if ($absensi->bukti) {
                 Storage::delete('public/bukti_izin/'.$absensi->bukti);
             }
@@ -119,12 +111,10 @@ class AbsensiController extends Controller
             ->with('success', 'Absensi berhasil diupdate');
     }
 
-    // Hapus absensi (Admin)
     public function destroy($id)
     {
         $absensi = Absensi::findOrFail($id);
 
-        // Hapus file bukti dari storage saat data dihapus
         if ($absensi->bukti) {
             Storage::delete('public/bukti_izin/'.$absensi->bukti);
         }
@@ -135,15 +125,66 @@ class AbsensiController extends Controller
             ->with('success', 'Absensi berhasil dihapus');
     }
 
-    // Show detail absensi (Admin)
-    public function show($id)
+    /**
+     * Tampilan Detail Absensi Per Guru dengan Filter Bulan & Tahun
+     */
+    public function show(Request $request, $id)
+    {
+        // Casting ke (int) untuk mencegah TypeError pada Carbon::setUnit()
+        $bulan = (int) $request->get('bulan', date('m'));
+        $tahun = (int) $request->get('tahun', date('Y'));
+
+        $guru = Guru::with(['absensi' => function ($query) use ($bulan, $tahun) {
+            $query->whereMonth('tanggal', $bulan)
+                ->whereYear('tanggal', $tahun)
+                ->orderBy('tanggal', 'desc');
+        }])->withCount([
+            'absensi as total_hadir' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Hadir'),
+            'absensi as total_izin' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Izin'),
+            'absensi as total_sakit' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Sakit'),
+            'absensi as total_telat' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Telat'),
+            'absensi as total_alfa' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Alfa'),
+        ])->findOrFail($id);
+
+        return view('admin.guru.show_absensi', compact('guru'));
+    }
+
+    public function detail($id)
     {
         $absensi = Absensi::with('guru')->findOrFail($id);
 
         return view('admin.absensi.show', compact('absensi'));
     }
 
-    // Approve izin/sakit (Admin)
+    /**
+     * Cetak PDF Individu Guru dengan Filter Bulan & Tahun
+     */
+    public function cetakPerGuru(Request $request, $id)
+    {
+        $bulan = (int) $request->get('bulan', date('m'));
+        $tahun = (int) $request->get('tahun', date('Y'));
+
+        $guru = Guru::with(['absensi' => function ($q) use ($bulan, $tahun) {
+            $q->whereMonth('tanggal', $bulan)
+                ->whereYear('tanggal', $tahun)
+                ->orderBy('tanggal', 'desc');
+        }])->withCount([
+            'absensi as total_hadir' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Hadir'),
+            'absensi as total_izin' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Izin'),
+            'absensi as total_sakit' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Sakit'),
+            'absensi as total_telat' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Telat'),
+            'absensi as total_alfa' => fn ($q) => $q->whereMonth('tanggal', $bulan)->whereYear('tanggal', $tahun)->where('status', 'Alfa'),
+        ])->findOrFail($id);
+
+        $absensi = $guru->absensi;
+        $tanggal = Carbon::create()->month($bulan)->translatedFormat('F').' '.$tahun;
+
+        $pdf = Pdf::loadView('guru.absensi.cetak_pdf', compact('guru', 'absensi', 'tanggal'))
+            ->setPaper('a4', 'portrait');
+
+        return $pdf->download('Laporan_Absensi_'.$guru->nama.'_'.$tanggal.'.pdf');
+    }
+
     public function approve($id)
     {
         $absensi = Absensi::findOrFail($id);
@@ -155,7 +196,6 @@ class AbsensiController extends Controller
         return back()->with('success', 'Izin/Sakit telah disetujui');
     }
 
-    // Reject izin/sakit (Admin)
     public function reject(Request $request, $id)
     {
         $request->validate(['approval_note' => 'nullable|string|max:500']);
@@ -175,11 +215,9 @@ class AbsensiController extends Controller
      | USER / GURU
      ===================================================== */
 
-    // Dashboard absensi user (hari ini)
     public function userIndex()
     {
         $today = Carbon::today();
-
         $absensiHariIni = Absensi::where('guru_id', auth()->user()->guru->id)
             ->whereDate('tanggal', $today)
             ->first();
@@ -187,11 +225,9 @@ class AbsensiController extends Controller
         return view('user.absensi', compact('absensiHariIni'));
     }
 
-    // Absen Masuk (Jam Datang Otomatis)
     public function absenMasuk()
     {
         $today = Carbon::today();
-
         Absensi::firstOrCreate(
             [
                 'guru_id' => auth()->user()->guru->id,
@@ -203,34 +239,26 @@ class AbsensiController extends Controller
             ]
         );
 
-        return redirect()->back()
-            ->with('success', 'Absen masuk berhasil');
+        return redirect()->back()->with('success', 'Absen masuk berhasil');
     }
 
-    // Absen Pulang (Jam Pulang Otomatis)
     public function absenPulang()
     {
         $today = Carbon::today();
-
         $absensi = Absensi::where('guru_id', auth()->user()->guru->id)
             ->whereDate('tanggal', $today)
             ->first();
 
         if (! $absensi || ! $absensi->jam_datang) {
-            return redirect()->back()
-                ->with('error', 'Anda belum absen masuk');
+            return redirect()->back()->with('error', 'Anda belum absen masuk');
         }
 
         if ($absensi->jam_pulang) {
-            return redirect()->back()
-                ->with('error', 'Anda sudah absen pulang');
+            return redirect()->back()->with('error', 'Anda sudah absen pulang');
         }
 
-        $absensi->update([
-            'jam_pulang' => now(),
-        ]);
+        $absensi->update(['jam_pulang' => now()]);
 
-        return redirect()->back()
-            ->with('success', 'Absen pulang berhasil');
+        return redirect()->back()->with('success', 'Absen pulang berhasil');
     }
 }

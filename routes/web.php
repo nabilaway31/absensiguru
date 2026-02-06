@@ -18,6 +18,7 @@ require __DIR__.'/auth.php';
 Route::get('/', function () {
     return redirect()->route('login');
 });
+
 /*
 |--------------------------------------------------------------------------
 | ADMIN
@@ -35,6 +36,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/edit/{id}', [GuruController::class, 'edit'])->name('edit');
         Route::post('/update/{id}', [GuruController::class, 'update'])->name('update');
         Route::get('/hapus/{id}', [GuruController::class, 'destroy'])->name('destroy');
+
+        // TAMBAHAN: Route Cetak PDF Akumulasi Absensi Per Guru
+        Route::get('/cetak-absensi/{id}', [AbsensiController::class, 'cetakPerGuru'])
+            ->name('cetak');
     });
 
     Route::prefix('absensi')->name('absensi.')->group(function () {
@@ -54,10 +59,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         Route::get('/cetak', [LaporanController::class, 'cetak'])->name('cetak');
     });
 
-    Route::middleware(['auth', 'role:admin'])->group(function () { // Sesuaikan middleware admin Anda
-        Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-        Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
-    });
+    Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [SettingController::class, 'update'])->name('settings.update');
 });
 
 /*
@@ -67,7 +70,6 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 */
 Route::middleware(['auth', 'role:guru'])->prefix('guru-user')->name('guru_user.')->group(function () {
 
-    // Sesuaikan Controller ke GuruAbsensiController karena fungsi index (absen & jam_pulang) ada di sana
     Route::get('/dashboard', [GuruAbsensiController::class, 'index'])
         ->name('dashboard');
 
@@ -86,6 +88,10 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru-user')->name('guru_user.'
     Route::post('/profil/update', [GuruProfilController::class, 'update'])
         ->name('profil.update');
 
+    // Di dalam Route::prefix('guru')
+    Route::get('/cetak-absensi/{id}', [AbsensiController::class, 'cetakPerGuru'])
+        ->name('cetak');
+
     // Izin / Sakit (Guru)
     Route::prefix('izin')->name('izin.')->group(function () {
         Route::get('/', [GuruIzinController::class, 'index'])->name('index');
@@ -99,7 +105,7 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru-user')->name('guru_user.'
 | LOGOUT
 |--------------------------------------------------------------------------
 */
-Route::post('/logout', function () {
+Route::get('/logout', function () {
     Auth::logout();
     request()->session()->invalidate();
     request()->session()->regenerateToken();
